@@ -118,10 +118,39 @@ async function run() {
     output = execSync(command, {timeout, env, stdio: 'inherit'})?.toString()
     endTime = new Date()
 
+     const rootDir = process.env.GITHUB_WORKSPACE || process.cwd()
     // Check for XML test reports
-    const reportsDir = path.join(process.env.GITHUB_WORKSPACE || process.cwd(), 'target', 'surefire-reports')
-    const xmlTests = await parseXmlReports(reportsDir, command, maxScore)
+    const reportsDir = path.join(rootDir, 'target', 'surefire-reports')
     
+    // Display all files recursively
+   
+    console.log(`\n=== Listing all files recursively from: ${rootDir} ===`)
+    function listFilesRecursively(dir, indent = '') {
+      try {
+        const items = fs.readdirSync(dir)
+        items.forEach(item => {
+          const fullPath = path.join(dir, item)
+          try {
+            const stat = fs.statSync(fullPath)
+            if (stat.isDirectory()) {
+              console.log(`${indent}📁 ${item}/`)
+              listFilesRecursively(fullPath, indent + '  ')
+            } else {
+              console.log(`${indent}📄 ${item}`)
+            }
+          } catch (err) {
+            console.log(`${indent}❌ ${item} (access denied)`)
+          }
+        })
+      } catch (err) {
+        console.log(`${indent}❌ Cannot read directory: ${err.message}`)
+      }
+    }
+    listFilesRecursively(rootDir)
+    console.log(`=== End of file listing ===\n`)
+
+    const xmlTests = await parseXmlReports(reportsDir, command, maxScore)
+   
     if (xmlTests.length > 0) {
       // Use XML test results
       const overallStatus = xmlTests.every(t => t.status === 'pass') ? 'pass' : 'fail'
