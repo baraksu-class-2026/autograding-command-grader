@@ -56,6 +56,13 @@ async function parseXmlReports(reportsDir, command, maxScore) {
       if (testsuite && testsuite.testcase) {
         const testcases = Array.isArray(testsuite.testcase) ? testsuite.testcase : [testsuite.testcase]
         
+        // Get testsuite-level stats
+        const testsuiteAttrs = testsuite.$
+        const totalTests = parseInt(testsuiteAttrs.tests || 0)
+        const skipped = parseInt(testsuiteAttrs.skipped || 0)
+        const eligibleTests = totalTests - skipped
+        const scorePerTest = eligibleTests > 0 ? maxScore / eligibleTests : 0
+        
         testcases.forEach(testcase => {
           const attrs = testcase.$
           const classname = attrs.classname || ''
@@ -64,7 +71,7 @@ async function parseXmlReports(reportsDir, command, maxScore) {
           
           const hasFailure = testcase.failure && testcase.failure.length > 0
           const status = hasFailure ? 'fail' : 'pass'
-          const score = hasFailure ? 0 : maxScore
+          const score = hasFailure ? 0 : scorePerTest
           
           let message = ''
           let testCode = command
