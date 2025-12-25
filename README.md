@@ -32,24 +32,33 @@
 
 ```
 name: Autograding Tests
-
 on:
-  push
-
+  - workflow_dispatch
+  - repository_dispatch
+permissions:
+  checks: write
+  actions: read
+  contents: read
 jobs:
-  run-tests:
+  run-autograding-tests:
     runs-on: ubuntu-latest
+    if: github.actor != 'github-classroom[bot]'
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-    - name: Run Autograding Tests
-      uses: education/autograding-command-grader@v1
-      with:
-        test-name: 'Test Name'
-        setup-command: 'npm install'
-        command: 'npm test'
-        timeout: '15'
-        max-score: '100'
-    - name: Autograding Reporter
-      uses: ...
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Run tests.
+        id: run-tests
+        uses: baraksu-class-2026/autograding-command-grader@v1
+        with:
+          test-name: Run tests.
+          setup-command: mvn clean
+          command: mvn test
+          timeout: 10
+          max-score: 100
+      - name: Autograding Reporter
+        uses: classroom-resources/autograding-grading-reporter@v1
+        env:
+          RUN-TESTS_RESULTS: "${{steps.run-tests.outputs.result}}"
+        with:
+          runners: run-tests
 ```

@@ -115,42 +115,9 @@ function generateXmlTestResult(xmlTests, maxScore) {
       tests: xmlTests,
     }
     
-    console.log('\n=== Generated XML Test Result ===')
-    console.log(JSON.stringify(result, null, 2))
-    console.log('=== End of XML Test Result ===\n')
-    
     return result
   }
   return null
-}
-
-function listAllFilesRecursively(rootDir) {
-  console.log(`\n=== Listing all files recursively from: ${rootDir} ===`)
-  
-  function listFilesRecursively(dir, indent = '') {
-    try {
-      const items = fs.readdirSync(dir)
-      items.forEach(item => {
-        const fullPath = path.join(dir, item)
-        try {
-          const stat = fs.statSync(fullPath)
-          if (stat.isDirectory()) {
-            console.log(`${indent}📁 ${item}/`)
-            listFilesRecursively(fullPath, indent + '  ')
-          } else {
-            console.log(`${indent}📄 ${item}`)
-          }
-        } catch (err) {
-          console.log(`${indent}❌ ${item} (access denied)`)
-        }
-      })
-    } catch (err) {
-      console.log(`${indent}❌ Cannot read directory: ${err.message}`)
-    }
-  }
-  
-  listFilesRecursively(rootDir)
-  console.log(`=== End of file listing ===\n`)
 }
 
 function getErrorMessageAndStatus(error, command) {
@@ -191,9 +158,6 @@ async function run() {
     output = execSync(command, {timeout, env, stdio: 'inherit'})?.toString()
     endTime = new Date()
 
-    // Display all files recursively
-    listAllFilesRecursively(rootDir)
-
     const xmlTests = await parseXmlReports(reportsDir, command, maxScore)
    
     result = generateXmlTestResult(xmlTests, maxScore)
@@ -205,11 +169,7 @@ async function run() {
   } catch (error) {
     endTime = new Date()
     
-    // Display all files recursively even on error
-    listAllFilesRecursively(rootDir)
-    
     // Try to parse XML reports even on error
-    
     const xmlTests = await parseXmlReports(reportsDir, command, maxScore)
     
     result = generateXmlTestResult(xmlTests, maxScore)
