@@ -28,7 +28,6 @@ function generateResult(status, testName, command, message, duration, maxScore) 
         score: status === 'pass' ? maxScore : 0,
         message,
         test_code: command,
-        filename: '',
         line_no: 0,
         duration,
       },
@@ -141,8 +140,8 @@ async function run() {
   const maxScore = parseInt(core.getInput('max-score') || 0)
 
   let output = ''
-  let startTime
-  let endTime
+  let startTime = new Date()
+  let endTime = new Date()
   let result
 
     const rootDir = process.env.GITHUB_WORKSPACE || process.cwd()
@@ -150,13 +149,15 @@ async function run() {
     const reportsDir = path.join(rootDir, 'target', 'surefire-reports')
 
   try {
-    if (setupCommand) {
-      execSync(setupCommand, {timeout, env, stdio: 'inherit'})
-    }
+    if (!fs.existsSync(reportsDir) || fs.readdirSync(reportsDir).length === 0) {
+      if (setupCommand) {
+        execSync(setupCommand, {timeout, env, stdio: 'inherit'})
+      }
 
-    startTime = new Date()
-    output = execSync(command, {timeout, env, stdio: 'inherit'})?.toString()
-    endTime = new Date()
+      startTime = new Date()
+      output = execSync(command, {timeout, env, stdio: 'inherit'})?.toString()
+      endTime = new Date()
+    }
 
     const xmlTests = await parseXmlReports(reportsDir, command, maxScore)
    
