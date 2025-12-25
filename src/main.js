@@ -76,7 +76,7 @@ async function parseXmlReports(reportsDir, command, maxScore) {
             status,
             score,
             message,
-            test_code: command,
+            test_code: score,
             filename: xmlFile,
             line_no: 0,
             duration: time * 1000, // Convert to milliseconds
