@@ -67,8 +67,14 @@ async function parseXmlReports(reportsDir, command, maxScore) {
           const score = hasFailure ? 0 : maxScore
           
           let message = ''
+          let testCode = command
           if (hasFailure) {
             message = testcase.failure[0].$.message || 'Test failed'
+            // Include all failure information in test_code
+            const failureMessage = testcase.failure[0].$.message || ''
+            const failureType = testcase.failure[0].$.type || ''
+            const failureContent = testcase.failure[0]._ || ''
+            testCode = `Failure Type: ${failureType}\nMessage: ${failureMessage}\n\nStack Trace:\n${failureContent}`
           }
           
           testResults.push({
@@ -76,7 +82,7 @@ async function parseXmlReports(reportsDir, command, maxScore) {
             status,
             score,
             message,
-            test_code: score,
+            test_code: testCode,
             filename: xmlFile,
             line_no: 0,
             duration: time * 1000, // Convert to milliseconds
@@ -95,12 +101,18 @@ function generateXmlTestResult(xmlTests, maxScore) {
   if (xmlTests.length > 0) {
     const overallStatus = xmlTests.every(t => t.status === 'pass') ? 'pass' : 'fail'
     
-    return {
+    const result = {
       version: 1,
       status: overallStatus,
       max_score: maxScore,
       tests: xmlTests,
     }
+    
+    console.log('\n=== Generated XML Test Result ===')
+    console.log(JSON.stringify(result, null, 2))
+    console.log('=== End of XML Test Result ===\n')
+    
+    return result
   }
   return null
 }
