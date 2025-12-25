@@ -51,29 +51,36 @@ async function parseXmlReports(reportsDir, command, maxScore) {
     
     try {
       const result = await parseStringPromise(xmlContent)
-      const testsuite = result.testsuite?.$
+      const testsuite = result.testsuite
       
-      if (testsuite) {
-        const tests = parseInt(testsuite.tests || 0)
-        const errors = parseInt(testsuite.errors || 0)
-        const skipped = parseInt(testsuite.skipped || 0)
-        const failures = parseInt(testsuite.failures || 0)
-        const time = parseFloat(testsuite.time || 0)
+      if (testsuite && testsuite.testcase) {
+        const testcases = Array.isArray(testsuite.testcase) ? testsuite.testcase : [testsuite.testcase]
         
-        const totalEligible = tests - skipped
-        const passed = tests - skipped - failures - errors
-        const score = totalEligible > 0 ? (passed / totalEligible) * maxScore : 0
-        const status = (failures === 0 && errors === 0) ? 'pass' : 'fail'
-        
-        testResults.push({
-          name: xmlFile,
-          status,
-          score,
-          message: `Tests: ${tests}, Passed: ${passed}, Failures: ${failures}, Errors: ${errors}, Skipped: ${skipped}`,
-          test_code: command,
-          xmlFile: '',
-          line_no: 0,
-          duration: time * 1000, // Convert to milliseconds
+        testcases.forEach(testcase => {
+          const attrs = testcase.$
+          const classname = attrs.classname || ''
+          const testName = attrs.name || ''
+          const time = parseFloat(attrs.time || 0)
+          
+          const hasFailure = testcase.failure && testcase.failure.length > 0
+          const status = hasFailure ? 'fail' : 'pass'
+          const score = hasFailure ? 0 : maxScore
+          
+          let message = ''
+          if (hasFailure) {
+            message = testcase.failure[0].$.message || 'Test failed'
+          }
+          
+          testResults.push({
+            name: `${classname}.${testName}`,
+            status,
+            score,
+            message,
+            test_code: command,
+            filename: xmlFile,
+            line_no: 0,
+            duration: time * 1000, // Convert to milliseconds
+          })
         })
       }
     } catch (error) {
