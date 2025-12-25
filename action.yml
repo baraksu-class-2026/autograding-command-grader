@@ -1,6 +1,8 @@
-name: "GitHub Classroom Command Grader"
-author: "GitHub"
-description: "A plugin for GitHub Classroom's Autograder. Seamlessly integrate your CS class with GitHub using this action to facilitate the grading process."
+name: "GitHub Classroom Maven Junit Command Grader"
+author: "baraksu"
+description: "Autograde for maven junit to github Classroom."
+icon: cloud-lightning
+color: blue
 inputs:
   test-name:
     description: "The unique identifier for the test."
