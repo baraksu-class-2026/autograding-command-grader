@@ -44,6 +44,7 @@ async function parseXmlReports(reportsDir, command, maxScore) {
   }
 
   const xmlFiles = fs.readdirSync(reportsDir).filter(file => file.endsWith('.xml'))
+  const maxScoreForFile = maxScore / xmlFiles.length
   
   for (const xmlFile of xmlFiles) {
     const xmlPath = path.join(reportsDir, xmlFile)
@@ -61,7 +62,7 @@ async function parseXmlReports(reportsDir, command, maxScore) {
         const totalTests = parseInt(testsuiteAttrs.tests || 0)
         const skipped = parseInt(testsuiteAttrs.skipped || 0)
         const eligibleTests = totalTests - skipped
-        const scorePerTest = eligibleTests > 0 ? maxScore / eligibleTests : 0
+        const scorePerTest = eligibleTests > 0 ? maxScoreForFile / eligibleTests : 0
         
         testcases.forEach(testcase => {
           const attrs = testcase.$
@@ -74,7 +75,7 @@ async function parseXmlReports(reportsDir, command, maxScore) {
           const score = hasFailure ? 0 : scorePerTest
           
           let message = ''
-          let testCode = command
+          let testCode = ''
           if (hasFailure) {
             message = testcase.failure[0].$.message || 'Test failed'
             // Include all failure information in test_code
@@ -90,7 +91,6 @@ async function parseXmlReports(reportsDir, command, maxScore) {
             score,
             message,
             test_code: testCode,
-            filename: xmlFile,
             line_no: 0,
             duration: time * 1000, // Convert to milliseconds
           })
