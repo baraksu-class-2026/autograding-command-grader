@@ -119,7 +119,7 @@ async function run() {
     endTime = new Date()
 
     // Check for XML test reports
-    const reportsDir = path.join(process.cwd(), 'target', 'surefire-reports')
+    const reportsDir = path.join(process.env.GITHUB_WORKSPACE || process.cwd(), 'target', 'surefire-reports')
     const xmlTests = await parseXmlReports(reportsDir, command, maxScore)
     
     if (xmlTests.length > 0) {
