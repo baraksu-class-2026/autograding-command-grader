@@ -84,6 +84,49 @@ async function parseXmlReports(reportsDir, command, maxScore) {
   return testResults
 }
 
+function generateXmlTestResult(xmlTests, maxScore) {
+  if (xmlTests.length > 0) {
+    const overallStatus = xmlTests.every(t => t.status === 'pass') ? 'pass' : 'fail'
+    
+    return {
+      version: 1,
+      status: overallStatus,
+      max_score: maxScore,
+      tests: xmlTests,
+    }
+  }
+  return null
+}
+
+function listAllFilesRecursively(rootDir) {
+  console.log(`\n=== Listing all files recursively from: ${rootDir} ===`)
+  
+  function listFilesRecursively(dir, indent = '') {
+    try {
+      const items = fs.readdirSync(dir)
+      items.forEach(item => {
+        const fullPath = path.join(dir, item)
+        try {
+          const stat = fs.statSync(fullPath)
+          if (stat.isDirectory()) {
+            console.log(`${indent}📁 ${item}/`)
+            listFilesRecursively(fullPath, indent + '  ')
+          } else {
+            console.log(`${indent}📄 ${item}`)
+          }
+        } catch (err) {
+          console.log(`${indent}❌ ${item} (access denied)`)
+        }
+      })
+    } catch (err) {
+      console.log(`${indent}❌ Cannot read directory: ${err.message}`)
+    }
+  }
+  
+  listFilesRecursively(rootDir)
+  console.log(`=== End of file listing ===\n`)
+}
+
 function getErrorMessageAndStatus(error, command) {
   if (error.message.includes('ETIMEDOUT')) {
     return { status: 'error', errorMessage: 'Command timed out' }
@@ -109,6 +152,10 @@ async function run() {
   let endTime
   let result
 
+    const rootDir = process.env.GITHUB_WORKSPACE || process.cwd()
+    // Check for XML test reports
+    const reportsDir = path.join(rootDir, 'target', 'surefire-reports')
+
   try {
     if (setupCommand) {
       execSync(setupCommand, {timeout, env, stdio: 'inherit'})
@@ -118,57 +165,33 @@ async function run() {
     output = execSync(command, {timeout, env, stdio: 'inherit'})?.toString()
     endTime = new Date()
 
-     const rootDir = process.env.GITHUB_WORKSPACE || process.cwd()
-    // Check for XML test reports
-    const reportsDir = path.join(rootDir, 'target', 'surefire-reports')
-    
     // Display all files recursively
-   
-    console.log(`\n=== Listing all files recursively from: ${rootDir} ===`)
-    function listFilesRecursively(dir, indent = '') {
-      try {
-        const items = fs.readdirSync(dir)
-        items.forEach(item => {
-          const fullPath = path.join(dir, item)
-          try {
-            const stat = fs.statSync(fullPath)
-            if (stat.isDirectory()) {
-              console.log(`${indent}📁 ${item}/`)
-              listFilesRecursively(fullPath, indent + '  ')
-            } else {
-              console.log(`${indent}📄 ${item}`)
-            }
-          } catch (err) {
-            console.log(`${indent}❌ ${item} (access denied)`)
-          }
-        })
-      } catch (err) {
-        console.log(`${indent}❌ Cannot read directory: ${err.message}`)
-      }
-    }
-    listFilesRecursively(rootDir)
-    console.log(`=== End of file listing ===\n`)
+    listAllFilesRecursively(rootDir)
 
     const xmlTests = await parseXmlReports(reportsDir, command, maxScore)
    
-    if (xmlTests.length > 0) {
-      // Use XML test results
-      const overallStatus = xmlTests.every(t => t.status === 'pass') ? 'pass' : 'fail'
-      
-      result = {
-        version: 1,
-        status: overallStatus,
-        max_score: maxScore,
-        tests: xmlTests,
-      }
-    } else {
+    result = generateXmlTestResult(xmlTests, maxScore)
+    
+    if (!result) {
       // Fallback to original behavior
       result = generateResult('pass', testName, command, output, endTime - startTime, maxScore)
     }
   } catch (error) {
     endTime = new Date()
-    const {status, errorMessage} = getErrorMessageAndStatus(error, command)
-    result = generateResult(status, testName, command, errorMessage, endTime - startTime, maxScore)
+    
+    // Display all files recursively even on error
+    listAllFilesRecursively(rootDir)
+    
+    // Try to parse XML reports even on error
+    
+    const xmlTests = await parseXmlReports(reportsDir, command, maxScore)
+    
+    result = generateXmlTestResult(xmlTests, maxScore)
+    
+    if (!result) {
+      const {status, errorMessage} = getErrorMessageAndStatus(error, command)
+      result = generateResult(status, testName, command, errorMessage, endTime - startTime, maxScore)
+    }
   }
 
   core.setOutput('result', btoa(JSON.stringify(result)))
