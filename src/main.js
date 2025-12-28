@@ -155,7 +155,9 @@ async function run() {
       }
 
       startTime = new Date()
-      output = execSync(command, {timeout, env, stdio: 'inherit'})?.toString()
+      if (!fs.existsSync(reportsDir) || fs.readdirSync(reportsDir).length === 0) {
+        output = execSync(command, {timeout, env, stdio: 'inherit'})?.toString()
+      }
       endTime = new Date()
     }
 
